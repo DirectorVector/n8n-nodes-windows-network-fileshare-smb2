@@ -3,19 +3,41 @@ import { INodePropertyOptions, INodeProperties } from 'n8n-workflow';
 // Resources
 export const resources: INodePropertyOptions[] = [
 	{
+		name: 'Connection',
+		value: 'connection',
+	},
+	{
 		name: 'File',
 		value: 'file',
-		description: 'File operations on Windows network shares',
 	},
 	{
 		name: 'Directory',
 		value: 'directory',
-		description: 'Directory operations on Windows network shares',
 	},
 ];
 
 // Operations
 export const operations: INodeProperties[] = [
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: {
+			show: {
+				resource: ['connection'],
+			},
+		},
+		options: [
+			{
+				name: 'Test Connection',
+				value: 'test',
+				description: 'Test the SMB2 connection and credentials',
+				action: 'Test the SMB2 connection',
+			},
+		],
+		default: 'test',
+	},
 	{
 		displayName: 'Operation',
 		name: 'operation',

@@ -1,19 +1,28 @@
 {
   "name": "n8n-nodes-windows-network-fileshare-smb2",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.2",
   "description": "n8n community node for Windows File Share access via SMB2 protocol",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-community-node-package",
+    "n8n",
+    "windows",
+    "network",
+    "fileshare",
+    "file",
+    "smb2",
+    "file-share",
+    "network-drive",
+    "automation"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/DirectorVector/n8n-nodes-windows-network-fileshare-smb2#readme",
   "author": {
-    "name": "Community Developer",
-    "email": "developer@example.com"
+    "name": "DirectorVector",
+    "email": "bthrower@vortexglobal.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/community/n8n-nodes-windows-network-fileshare-smb2.git"
+    "url": "git+https://github.com/DirectorVector/n8n-nodes-windows-network-fileshare-smb2.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -26,9 +35,10 @@
     "format:check": "prettier nodes credentials --check",
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
-    "test": "npm run test:operations && npm run test:node",
+    "test": "npm run test:operations && npm run test:node && npm run test:connection",
     "test:operations": "node --openssl-legacy-provider test-smb2-operations.js",
     "test:node": "node --openssl-legacy-provider test-n8n-node.js",
+    "test:connection": "node --openssl-legacy-provider test-connection.js",
     "test:ci": "npm run lint && npm run format:check && npm run build && npm run test",
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },

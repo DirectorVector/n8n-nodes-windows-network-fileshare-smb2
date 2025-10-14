@@ -96,7 +96,28 @@ export class WindowsFileshare implements INodeType {
 					return path.replace(/\//g, '\\').replace(/^\\+/, '');
 				};
 
-				if (resource === 'file') {
+				if (resource === 'connection') {
+					if (operation === 'test') {
+						const client = createSMB2Client();
+
+						// Test connection by listing root directory
+						const files = (await promisify(client.readdir.bind(client), '')) as string[];
+
+						responseData = {
+							connectionTest: 'success',
+							message: 'SMB2 connection successful',
+							rootDirectoryFiles: files.length,
+							sampleFiles: files.slice(0, 5),
+							timestamp: new Date().toISOString(),
+							credentials: {
+								share: credentials.share,
+								domain: credentials.domain,
+								username: credentials.username,
+								timeout: credentials.timeout,
+							},
+						};
+					}
+				} else if (resource === 'file') {
 					const client = createSMB2Client();
 
 					if (operation === 'read') {
