@@ -1,5 +1,8 @@
 import {
+	ICredentialsDecrypted,
+	ICredentialTestFunctions,
 	IExecuteFunctions,
+	INodeCredentialTestResult,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
@@ -17,6 +20,19 @@ import {
 declare const require: any;
 declare const Buffer: any;
 const SMB2 = require('@marsaud/smb2');
+
+// Validate a UNC share path before handing it to @marsaud/smb2, which otherwise
+// throws a cryptic "the share is not valid" for anything but \\server\share.
+function validateShare(share: string): string | null {
+	if (!share) return 'Share path is required (e.g. \\\\server\\ShareName).';
+	if (!/^\\\\[^\\]+\\[^\\]+/.test(share)) {
+		return 'Share must be a UNC path like \\\\server\\ShareName — use double backslashes, no forward slashes, and no trailing slash.';
+	}
+	if (/[\\/]$/.test(share)) {
+		return 'Remove the trailing slash from the share path (use \\\\server\\ShareName, put sub-folders in the node path).';
+	}
+	return null;
+}
 
 export class WindowsFileshare implements INodeType {
 	description: INodeTypeDescription = {
@@ -52,6 +68,62 @@ export class WindowsFileshare implements INodeType {
 			...directoryFields,
 			...commonFields,
 		],
+	};
+
+	methods = {
+		credentialTest: {
+			async windowsNetworkApiTest(
+				this: ICredentialTestFunctions,
+				credential: ICredentialsDecrypted,
+			): Promise<INodeCredentialTestResult> {
+				const creds = (credential.data || {}) as any;
+				const share = ((creds.share as string) || '').trim();
+
+				const shareError = validateShare(share);
+				if (shareError) {
+					return { status: 'Error', message: shareError };
+				}
+
+				let client: any;
+				try {
+					client = new SMB2({
+						share,
+						domain: creds.domain,
+						username: creds.username,
+						password: creds.password,
+						timeout: creds.timeout || 30000,
+					});
+				} catch (error) {
+					return { status: 'Error', message: (error as Error).message };
+				}
+
+				try {
+					const files: string[] = await new Promise((resolve, reject) => {
+						client.readdir('', (err: any, result: any) => {
+							if (err) reject(err);
+							else resolve(result);
+						});
+					});
+					return {
+						status: 'OK',
+						message: `Connection successful — ${files.length} item(s) in the share root.`,
+					};
+				} catch (error) {
+					const message = (error as Error).message || 'SMB2 connection failed.';
+					const hint = /digital envelope routines|unsupported/i.test(message)
+						? ' (start n8n with NODE_OPTIONS=--openssl-legacy-provider)'
+						: '';
+					return { status: 'Error', message: message + hint };
+				} finally {
+					try {
+						if (typeof client.disconnect === 'function') client.disconnect();
+						else if (typeof client.close === 'function') client.close();
+					} catch (disconnectError) {
+						// Best-effort cleanup.
+					}
+				}
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
