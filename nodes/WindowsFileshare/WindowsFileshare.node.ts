@@ -61,6 +61,11 @@ export class WindowsFileshare implements INodeType {
 		let responseData;
 
 		for (let i = 0; i < items.length; i++) {
+			// Track the SMB2 client for this item so it can always be torn down.
+			// @marsaud/smb2 opens a TCP socket + NTLM session per client; leaving it
+			// open leaks sessions/handles in n8n's long-running process.
+			let client: any = null;
+
 			try {
 				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
@@ -98,7 +103,7 @@ export class WindowsFileshare implements INodeType {
 
 				if (resource === 'connection') {
 					if (operation === 'test') {
-						const client = createSMB2Client();
+						client = createSMB2Client();
 
 						// Test connection by listing root directory
 						const files = (await promisify(client.readdir.bind(client), '')) as string[];
@@ -118,7 +123,7 @@ export class WindowsFileshare implements INodeType {
 						};
 					}
 				} else if (resource === 'file') {
-					const client = createSMB2Client();
+					client = createSMB2Client();
 
 					if (operation === 'read') {
 						const filePath = normalizePath(this.getNodeParameter('filePath', i) as string);
@@ -187,7 +192,7 @@ export class WindowsFileshare implements INodeType {
 						};
 					}
 				} else if (resource === 'directory') {
-					const client = createSMB2Client();
+					client = createSMB2Client();
 
 					if (operation === 'list') {
 						const directoryPath = normalizePath(
@@ -244,6 +249,21 @@ export class WindowsFileshare implements INodeType {
 					continue;
 				}
 				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
+			} finally {
+				// Always tear down the SMB2 connection for this item. Without this the
+				// underlying socket/NTLM session leaks across executions.
+				if (client) {
+					try {
+						if (typeof client.disconnect === 'function') {
+							client.disconnect();
+						} else if (typeof client.close === 'function') {
+							client.close();
+						}
+					} catch (disconnectError) {
+						// Best-effort cleanup; ignore errors from an already-closed socket.
+					}
+					client = null;
+				}
 			}
 		}
 
