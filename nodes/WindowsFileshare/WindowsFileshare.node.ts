@@ -65,6 +65,8 @@ export class WindowsFileshare implements INodeType {
 			// @marsaud/smb2 opens a TCP socket + NTLM session per client; leaving it
 			// open leaks sessions/handles in n8n's long-running process.
 			let client: any = null;
+			// Optional binary payload to attach to this item's output.
+			let itemBinary: any = null;
 
 			try {
 				const resource = this.getNodeParameter('resource', i) as string;
@@ -127,28 +129,62 @@ export class WindowsFileshare implements INodeType {
 
 					if (operation === 'read') {
 						const filePath = normalizePath(this.getNodeParameter('filePath', i) as string);
+						const readAs = this.getNodeParameter('readAs', i, 'text') as string;
 
 						const data = (await promisify(client.readFile.bind(client), filePath)) as any;
-						const content = data.toString();
 
-						responseData = {
-							filePath,
-							content,
-							size: data.length,
-							encoding: 'utf8',
-						};
+						if (readAs === 'binary') {
+							const binaryPropertyName = this.getNodeParameter(
+								'readBinaryPropertyName',
+								i,
+								'data',
+							) as string;
+							const fileName = filePath.split('\\').pop() || filePath;
+							const prepared = await this.helpers.prepareBinaryData(data, fileName);
+
+							responseData = {
+								filePath,
+								fileName,
+								size: data.length,
+								mimeType: prepared.mimeType,
+							};
+							itemBinary = { [binaryPropertyName]: prepared };
+						} else {
+							const content = data.toString();
+
+							responseData = {
+								filePath,
+								content,
+								size: data.length,
+								encoding: 'utf8',
+							};
+						}
 					} else if (operation === 'write') {
 						const filePath = normalizePath(this.getNodeParameter('filePath', i) as string);
-						const fileContent = this.getNodeParameter('fileContent', i) as string;
-						const encoding = this.getNodeParameter('encoding', i, 'utf8') as string;
+						const writeInputType = this.getNodeParameter('writeInputType', i, 'text') as string;
 
-						const buffer = Buffer.from(fileContent, encoding as any);
+						let buffer: any;
+						let encoding = 'binary';
+						if (writeInputType === 'binary') {
+							const binaryPropertyName = this.getNodeParameter(
+								'writeBinaryPropertyName',
+								i,
+								'data',
+							) as string;
+							buffer = await this.helpers.getBinaryDataBuffer(i, binaryPropertyName);
+						} else {
+							const fileContent = this.getNodeParameter('fileContent', i) as string;
+							encoding = this.getNodeParameter('encoding', i, 'utf8') as string;
+							buffer = Buffer.from(fileContent, encoding as any);
+						}
+
 						await promisify(client.writeFile.bind(client), filePath, buffer);
 
 						responseData = {
 							filePath,
 							size: buffer.length,
-							encoding,
+							input: writeInputType,
+							encoding: writeInputType === 'text' ? encoding : undefined,
 							success: true,
 						};
 					} else if (operation === 'delete') {
@@ -233,19 +269,21 @@ export class WindowsFileshare implements INodeType {
 					}
 				}
 
-				const executionData = this.helpers.constructExecutionMetaData(
-					this.helpers.returnJsonArray(responseData as any),
-					{ itemData: { item: i } },
-				);
+				const newItem: INodeExecutionData = {
+					json: (responseData as any) || {},
+					pairedItem: { item: i },
+				};
+				if (itemBinary) {
+					newItem.binary = itemBinary;
+				}
 
-				returnData.push(...executionData);
+				returnData.push(newItem);
 			} catch (error) {
 				if (this.continueOnFail()) {
-					const executionErrorData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ error: error.message }),
-						{ itemData: { item: i } },
-					);
-					returnData.push(...executionErrorData);
+					returnData.push({
+						json: { error: error.message },
+						pairedItem: { item: i },
+					});
 					continue;
 				}
 				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
