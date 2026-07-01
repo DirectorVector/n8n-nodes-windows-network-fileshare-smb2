@@ -16,6 +16,16 @@ export const resources: INodePropertyOptions[] = [
 	},
 ];
 
+// Shared text encodings (Node.js Buffer encodings) for Read/Write text mode.
+const encodingOptions: INodePropertyOptions[] = [
+	{ name: 'UTF-8', value: 'utf8' },
+	{ name: 'ASCII', value: 'ascii' },
+	{ name: 'Latin1 (Binary)', value: 'latin1' },
+	{ name: 'UTF-16LE', value: 'utf16le' },
+	{ name: 'Base64', value: 'base64' },
+	{ name: 'Hex', value: 'hex' },
+];
+
 // Operations
 export const operations: INodeProperties[] = [
 	{
@@ -145,7 +155,7 @@ export const fileFields: INodeProperties[] = [
 			{
 				name: 'Text',
 				value: 'text',
-				description: 'Decode the file as a UTF-8 string (only safe for text files)',
+				description: 'Decode the file into a string using the selected encoding (for text files)',
 			},
 			{
 				name: 'Binary',
@@ -159,6 +169,22 @@ export const fileFields: INodeProperties[] = [
 			show: {
 				resource: ['file'],
 				operation: ['read'],
+			},
+		},
+	},
+	{
+		displayName: 'Read Encoding',
+		name: 'readEncoding',
+		type: 'options',
+		options: encodingOptions,
+		default: 'utf8',
+		description:
+			'Character encoding used to decode the file into a string. For non-text files use Output: Binary instead.',
+		displayOptions: {
+			show: {
+				resource: ['file'],
+				operation: ['read'],
+				readAs: ['text'],
 			},
 		},
 	},
@@ -258,22 +284,9 @@ export const fileFields: INodeProperties[] = [
 		displayName: 'Encoding',
 		name: 'encoding',
 		type: 'options',
-		options: [
-			{
-				name: 'UTF-8',
-				value: 'utf8',
-			},
-			{
-				name: 'ASCII',
-				value: 'ascii',
-			},
-			{
-				name: 'Binary',
-				value: 'binary',
-			},
-		],
+		options: encodingOptions,
 		default: 'utf8',
-		description: 'Encoding for file content',
+		description: 'Encoding used to convert the text into bytes before writing',
 		displayOptions: {
 			show: {
 				resource: ['file'],

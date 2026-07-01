@@ -222,13 +222,14 @@ export class WindowsFileshare implements INodeType {
 							};
 							itemBinary = { [binaryPropertyName]: prepared };
 						} else {
-							const content = data.toString();
+							const readEncoding = this.getNodeParameter('readEncoding', i, 'utf8') as string;
+							const content = data.toString(readEncoding);
 
 							responseData = {
 								filePath,
 								content,
 								size: data.length,
-								encoding: 'utf8',
+								encoding: readEncoding,
 							};
 						}
 					} else if (operation === 'write') {
