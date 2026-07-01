@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-windows-network-fileshare-smb2",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "n8n community node for Windows File Share access via SMB2 protocol",
   "keywords": [
     "n8n-community-node-package",
