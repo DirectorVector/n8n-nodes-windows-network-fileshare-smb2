@@ -135,6 +135,49 @@ export const fileFields: INodeProperties[] = [
 		},
 	},
 
+	// Read: output as text or binary
+	{
+		displayName: 'Output',
+		name: 'readAs',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{
+				name: 'Text',
+				value: 'text',
+				description: 'Decode the file as a UTF-8 string (only safe for text files)',
+			},
+			{
+				name: 'Binary',
+				value: 'binary',
+				description: 'Return the raw bytes as n8n binary data (use for images, PDFs, any non-text file)',
+			},
+		],
+		default: 'text',
+		description: 'How to return the file contents',
+		displayOptions: {
+			show: {
+				resource: ['file'],
+				operation: ['read'],
+			},
+		},
+	},
+	{
+		displayName: 'Put Output in Field',
+		name: 'readBinaryPropertyName',
+		type: 'string',
+		required: true,
+		default: 'data',
+		description: 'Name of the binary property to write the file bytes to',
+		displayOptions: {
+			show: {
+				resource: ['file'],
+				operation: ['read'],
+				readAs: ['binary'],
+			},
+		},
+	},
+
 	// File Write
 	{
 		displayName: 'File Path',
@@ -148,6 +191,48 @@ export const fileFields: INodeProperties[] = [
 			show: {
 				resource: ['file'],
 				operation: ['write'],
+			},
+		},
+	},
+	// Write: input from text or binary
+	{
+		displayName: 'Input',
+		name: 'writeInputType',
+		type: 'options',
+		noDataExpression: true,
+		options: [
+			{
+				name: 'Text',
+				value: 'text',
+				description: 'Write a string from the File Content field',
+			},
+			{
+				name: 'Binary',
+				value: 'binary',
+				description: 'Write the raw bytes from an incoming binary property (lossless for any file type)',
+			},
+		],
+		default: 'text',
+		description: 'Where the file content comes from',
+		displayOptions: {
+			show: {
+				resource: ['file'],
+				operation: ['write'],
+			},
+		},
+	},
+	{
+		displayName: 'Input Binary Field',
+		name: 'writeBinaryPropertyName',
+		type: 'string',
+		required: true,
+		default: 'data',
+		description: 'Name of the incoming binary property that holds the bytes to write',
+		displayOptions: {
+			show: {
+				resource: ['file'],
+				operation: ['write'],
+				writeInputType: ['binary'],
 			},
 		},
 	},
@@ -165,6 +250,7 @@ export const fileFields: INodeProperties[] = [
 			show: {
 				resource: ['file'],
 				operation: ['write'],
+				writeInputType: ['text'],
 			},
 		},
 	},
@@ -192,6 +278,7 @@ export const fileFields: INodeProperties[] = [
 			show: {
 				resource: ['file'],
 				operation: ['write'],
+				writeInputType: ['text'],
 			},
 		},
 	},
