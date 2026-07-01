@@ -1,4 +1,4 @@
-import { ICredentialType, INodeProperties, ICredentialTestRequest } from 'n8n-workflow';
+import { ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class WindowsNetworkApi implements ICredentialType {
 	name = 'windowsNetworkApi';
@@ -11,7 +11,8 @@ export class WindowsNetworkApi implements ICredentialType {
 			type: 'string',
 			default: '',
 			placeholder: '\\\\server\\ShareName',
-			description: 'The UNC path to the Windows network share (e.g., \\\\server\\ShareName)',
+			description:
+				'UNC path to the share root, e.g. \\\\server\\ShareName. Use double backslashes and no trailing slash. Forward slashes are not supported. Put sub-folders in the node path, not here.',
 			required: true,
 		},
 		{
@@ -29,7 +30,7 @@ export class WindowsNetworkApi implements ICredentialType {
 			type: 'string',
 			default: '',
 			placeholder: 'username',
-			description: 'Windows username for authentication',
+			description: 'Windows username for authentication (without the domain prefix)',
 			required: true,
 		},
 		{
@@ -44,7 +45,7 @@ export class WindowsNetworkApi implements ICredentialType {
 			required: true,
 		},
 		{
-			displayName: 'Connection Timeout (ms)',
+			displayName: 'Connection Timeout (Ms)',
 			name: 'timeout',
 			type: 'number',
 			default: 30000,
@@ -53,15 +54,9 @@ export class WindowsNetworkApi implements ICredentialType {
 		},
 	];
 
-	// SMB2 credential testing requires custom implementation in the node itself
-	// The HTTP-based test system cannot handle SMB2 connections
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: 'https://httpbin.org',
-			url: '/status/200',
-			method: 'GET',
-		},
-		// This is a placeholder - actual SMB2 testing is done in the node
-		// The real test happens when the user tries to use the credentials
-	};
+	// SMB2 cannot be tested over HTTP, so the test is implemented as a real SMB2
+	// connection in the node (see the windowsNetworkApiTest method in
+	// WindowsFileshare.node.ts). It opens a session with these credentials and
+	// lists the share root.
+	testedBy = 'windowsNetworkApiTest';
 }
