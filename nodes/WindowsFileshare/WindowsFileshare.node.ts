@@ -289,15 +289,31 @@ export class WindowsFileshare implements INodeType {
 					} else if (operation === 'metadata') {
 						const filePath = normalizePath(this.getNodeParameter('filePath', i) as string);
 
-						const [size, exists] = await Promise.all([
-							promisify(client.getSize.bind(client), filePath) as Promise<number>,
-							promisify(client.exists.bind(client), filePath) as Promise<boolean>,
-						]);
+						// One call only. @marsaud/smb2 connects lazily and only marks the client
+						// connected after tree_connect, so two concurrent calls on a fresh client
+						// both call socket.connect() — the second fails with EALREADY/EISCONN and
+						// the duplicate negotiate draws ECONNRESET from the server. getSize opens
+						// the file anyway, so its not-found status answers "exists" (same codes
+						// @marsaud/smb2's own exists() treats as false).
+						let exists = true;
+						let size = 0;
+						try {
+							size = (await promisify(client.getSize.bind(client), filePath)) as number;
+						} catch (error) {
+							const code = (error as any).code;
+							if (
+								code !== 'STATUS_OBJECT_NAME_NOT_FOUND' &&
+								code !== 'STATUS_OBJECT_PATH_NOT_FOUND'
+							) {
+								throw error;
+							}
+							exists = false;
+						}
 
 						responseData = {
 							filePath,
 							exists,
-							size: exists ? size : 0,
+							size,
 						};
 					}
 				} else if (resource === 'directory') {
