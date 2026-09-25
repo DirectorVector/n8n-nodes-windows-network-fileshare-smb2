@@ -35,7 +35,7 @@ This node supports comprehensive file and directory operations on Windows networ
 - **Write File** - Write a file from **Text** (string + encoding) or **Binary** (an incoming binary property, lossless for any file type)
 - **Delete File** - Remove files from the network share
 - **Move File** - Rename or relocate files within the share
-- **File Metadata** - Get file size, existence, and other metadata
+- **File Metadata** - Get file size and existence: `{ filePath, exists, size }`. A missing file (or missing parent folder) returns `exists: false, size: 0` instead of an error
 
 ### Directory Operations
 - **List Directory** - Enumerate files and folders in a directory
